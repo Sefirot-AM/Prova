@@ -1,20 +1,35 @@
-
 import yfinance as yf
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Definisci i ticker delle azioni
-tickers = ['AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'G.MI']
+# Scarica i dati storici di un titolo (ad es. Apple)
+ticker = 'AAPL'
+data = yf.download(ticker, start='2010-01-01', end='2020-01-01')
 
-# Intervallo temporale
-start_date = '2009-09-30'
-end_date = '2019-09-30'
+# Calcola il momentum su un periodo di 12 mesi (252 giorni lavorativi)
+data['Momentum_12M'] = data['Adj Close'].pct_change(52)
 
-# Scarica i dati storici da Yahoo Finance
-data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
-data = data.reset_index()
+# Definisci i segnali di acquisto e vendita
+data['Signal'] = np.where(data['Momentum_12M'] > 0, 1, 0)  # Compra se il momentum è positivo
+data['Signal'] = np.where(data['Momentum_12M'] < 0, -1, data['Signal'])  # Vendi se il momentum è negativo
 
-data = data.iloc[:, [1,2,3,4,5,6]]
-# Salva in un file Excel
-data.to_excel('stock_prices_closing_2009_2019.xlsx', sheet_name='olo', index= False)
+# Calcola i ritorni giornalieri e i ritorni della strategia
+data['Returns'] = data['Adj Close'].pct_change()
+data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']  # Shift per evitare il lookahead bias
 
-print(data)
+# Calcola il capitale cumulativo (partendo da 1 unità)
+data['Cumulative_Market_Returns'] = (1 + data['Returns']).cumprod()
+data['Cumulative_Strategy_Returns'] = (1 + data['Strategy_Returns']).cumprod()
+
+# Mostra i risultati
+plt.figure(figsize=(10,6))
+plt.plot(data['Cumulative_Market_Returns'], label='Market Returns (Buy & Hold)', color='blue')
+plt.plot(data['Cumulative_Strategy_Returns'], label='Momentum Strategy Returns', color='red')
+plt.title(f'{ticker} Momentum Strategy vs Buy & Hold')
+plt.legend()
+plt.show()
+
+# Stampa la performance finale
+print(f"Performance della strategia: {data['Cumulative_Strategy_Returns'].iloc[-1]:.2f}")
+print(f"Performance del mercato: {data['Cumulative_Market_Returns'].iloc[-1]:.2f}")
