@@ -1,0 +1,20 @@
+
+import yfinance as yf
+import pandas as pd
+
+# Definisci i ticker delle azioni
+tickers = ['AAPL', 'MSFT', 'AMZN', 'NVDA', 'GOOGL', 'G.MI']
+
+# Intervallo temporale
+start_date = '2009-09-30'
+end_date = '2019-09-30'
+
+# Scarica i dati storici da Yahoo Finance
+data = yf.download(tickers, start=start_date, end=end_date)['Adj Close']
+data = data.reset_index()
+
+data = data.iloc[:, [1,2,3,4,5,6]]
+# Salva in un file Excel
+data.to_excel('stock_prices_closing_2009_2019.xlsx', sheet_name='olo', index= False)
+
+print(data)
